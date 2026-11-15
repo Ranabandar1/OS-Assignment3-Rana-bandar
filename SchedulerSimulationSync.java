@@ -509,6 +509,7 @@ public class SchedulerSimulationSync {
                     p.getName(), p.getPriority(), p.getBurstTime(), p.getWaitingTime(), p.getTurnaroundTime()));
         }
         System.out.println();
+
     }
 
     private static boolean verifyLine(String label, long expected, long observed) {
