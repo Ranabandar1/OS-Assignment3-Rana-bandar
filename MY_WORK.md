@@ -318,7 +318,7 @@ Intermediate.I am familiar with the fundamental ideas of locks, counting semapho
 
 ### Optional: Feedback on the assignment
 
-Instead of just learning theoretical ideas, the assignment helped me understand synchronization through real implementation. The semaphore shutdown technique, however, was difficult and needed thorough testing. The assignment, in my opinion, offers a good chance to comprehend how different threads interact when they share resources.
+Instead of just learning theoretical ideas, the assignment helped me understand synchronization through real implementation. The semaphore shutdown technique, however, was difficult and needed thorough testing. The assignment, in my opinion, offers a good chance to comprehend how different threads interact when they share resources..
 
 
 ---
