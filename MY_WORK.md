@@ -341,20 +341,37 @@ Instead of just learning theoretical ideas, the assignment helped me understand 
 
 **Your Answer:** *(3-5 sentences)*
 
-[Write your answer here.]
+An IllegalThreadStateException occurred in my initial beginning run since CPU-1 and CPU-2 chose P1 almost simultaneously. The simulation did not complete properly, thus the application later produced a watchdog alert. According to the verification, there were 28 context switches rather than 30, 13 finished processes rather than 14, and 112425 total service time rather than 119622. Due to concurrent access to the common Ready Queue and statistics, these inaccurate results show race conditions.
 
 Verification block of the **original starter**:
 ```
-[Paste the verification block (or the exception/watchdog message) of the starter here]
+Exception in thread "CPU-1" java.lang.IllegalThreadStateException
+    at java.base/java.lang.Thread.start(Thread.java:793)
+    at CpuWorker.run(SchedulerSimulationSync.java:283)
+
+WATCHDOG: the simulation did not finish (50 s).
+A process was lost, or a CPU is blocked forever,
+or the 'completed' counter lost an update.
+
+═══ VERIFICATION (expected values are computed from YOUR seed) ═══
+Context switches (quanta executed) expected 30 observed 28 MISMATCH
+Completed processes expected 14 observed 13 MISMATCH
+Total service time (ms) expected 119622 observed 112425 MISMATCH
+Busy-waiting polls (must be 0) expected 0 observed 1350 MISMATCH
 ```
 
 Verification block of **my final version**:
 ```
-[Paste the verification block of your final version here (all lines ✔)]
+═══ VERIFICATION (expected values are computed from YOUR seed) ═══
+Context switches (quanta executed) expected 30 observed 30 ✔
+Completed processes expected 14 observed 14 ✔
+Total service time (ms) expected 119622 observed 119622 ✔
+Busy-waiting polls (must be 0) expected 0 observed 0 ✔
+✔ All shared values are consistent.
 ```
 
 **Explanation of the timeline:**
-[Explain the lost update step by step.]
+For example, suppose contextSwitchCount currently equals 12. CPU-1 reads 12, and before it writes the updated value, CPU-2 also reads 12. Both CPUs execute RaceWindow.pause(), and then CPU-1 writes 13 followed by CPU-2 writing 13. The correct value should be 14, but one increment is lost because both threads used the same old value. This can also happen on a real machine without RaceWindow because the operating system can interrupt and switch between threads at different points, making the bug difficult to reproduce consistently.
 
 ## Question 2: Critical Sections and Lock Granularity
 
@@ -363,14 +380,17 @@ Verification block of **my final version**:
 > 💡 **TIP:** The three counters are independent: does updating `contextSwitchCount` need to block an update of `totalServiceTime`? Also think about what could go wrong (deadlock, or long waiting) if the queue lock and the statistics lock were the **same** lock and a thread held it while doing something slow.
 
 **Your Answer:** *(3-5 sentences)*
-
-[Write your answer here.]
+I protected all accesses to the shared Ready Queue data structures using queueLock, including add(), poll(), processOf(), and snapshot(). For the shared statistics, I used one separate ReentrantLock per variable: contextSwitchLock, completedProcessLock, and serviceTimeLock. I chose separate locks because the three statistics are independent, so updating one counter does not need to block updates to another, although this requires managing more locks. The Ready Queue uses a different lock because it protects different shared data, and separating the locks avoids unnecessary blocking between queue operations and statistics updates. These locks provide mutual exclusion, while the default non-fair ReentrantLock allows threads to make progress when the lock becomes available but does not guarantee bounded waiting or strict FIFO order.
 
 | Critical section (variable / method) | Lock used | Why it needs protection |
 |---|---|---|
-| [e.g., `ReadyQueue.poll()`] | [lock name] | [reason] |
-| [...] | [...] | [...] |
-
+| `ReadyQueue.add()` | `queueLock` | Protects adding processes to the shared queue and map from concurrent access. |
+| `ReadyQueue.poll()` | `queueLock` | Prevents multiple CPU threads from removing the same process at the same time. |
+| `ReadyQueue.processOf()` | `queueLock` | Protects access to the shared process map. |
+| `ReadyQueue.snapshot()` | `queueLock` | Ensures the queue is read safely while other threads may modify it. |
+| `contextSwitchCount` (update and getter) | `contextSwitchLock` | Prevents lost updates when multiple CPU threads modify the counter. |
+| `completedProcessCount` (update and getter) | `completedProcessLock` | Ensures the completed process count remains accurate. |
+| `totalServiceTime` (update and getter) | `serviceTimeLock` | Prevents lost updates when multiple CPU threads add service time. |
 ## Question 3: Busy Waiting vs Semaphore
 
 **Question**: Describe the **busy waiting** of the starter and its cost (give the `Busy-waiting polls` number from your **starter** run). What does the **value of your semaphore** represent? What is its **initial value** and why? What is its value right after the `numProcesses` initial `add()` calls? Why does the last CPU call `release(totalCPUs)` at the end, and what would happen if it did not?
@@ -379,7 +399,7 @@ Verification block of **my final version**:
 
 **Your Answer:** *(3-5 sentences)*
 
-[Write your answer here.]
+A CPU employed busy waiting in the initial starter by continually checking to see if the Ready Queue was empty, sleeping for 20 milliseconds, and then checking again. 1350 busy-waiting polls were displayed in my initial output, wasting CPU time. The counting semaphore in my final version indicates how many processes are available in the Ready Queue; as no processes have been added yet, it begins at zero. Before the CPU threads begin obtaining permits, its value is 14 following the 14 initial add() operations. The final CPUcalls release (totalCPUs) to awaken the stopped CPUs after all processes are finished; otherwise, they would be blocked indefinitely and the program would not end properly.
 
 ## Question 4: Classical Problems and Deadlock
 
@@ -390,24 +410,28 @@ Verification block of **my final version**:
 **Your Answer:** *(3-5 sentences)*
 
 **Classical problem and roles**:
-[Name the problem; who is the producer, who is the consumer?]
+The Producer-Consumer dilemma, sometimes referred to as the Bounded-Buffer Problem, is the traditional dilemma. The CPU workers operate as consumers when they remove processes from the Ready Queue, whereas the main thread acts as the initial producer by adding processes to it. When CPU workers re-enqueue unfinished processes, they can also function as producers.
 
 **Semaphores for a bounded queue (name and initial value)**:
-[Name the three semaphores and their initial values.]
+empty = K: represents the number of empty slots in a queue with capacity K.
+
+full = 0: represents the number of occupied slots initially.
+
+mutex = 1: protects the shared queue so only one thread accesses it at a time.
 
 **Deadlock scenario and prevention**:
-[Describe the scenario and the necessary condition you would break.]
+If a producer obtains the mutex before waiting for a vacant slot when the queue is full, a deadlock may result. In order to remove a process and generate an empty slot, the consumer requires the same mutex that the producer holds while they wait. Because neither thread can move further, this results in a stalemate. I would obtain empty before mutex, which violates the hold-and-wait requirement, to avoid it.
 
 ## Summary
 
 **Key concepts I understood through these questions:**
-1.
-2.
-3.
+1.Race conditions and how mutex locks protect critical sections using mutual exclusion.
+2.How lock granularity affects synchronization and why separate locks can protect independent shared variables.
+3.How a counting semaphore replaces busy waiting and helps CPU threads wait efficiently for available processes.
 
 **Concepts I need to study more:**
-1.
-2.
+1.Deadlock prevention and the four necessary conditions for deadlock.
+2.Thread scheduling and fairness when multiple threads compete for locks.
 
 ---
 
