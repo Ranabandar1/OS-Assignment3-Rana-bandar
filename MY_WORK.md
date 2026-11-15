@@ -132,81 +132,127 @@
 
 ## Your Development Log
 
-### Entry 1 - [Date and Time]
-**What I did**:
+### Entry 1 - [November 15, 2026 (11:00 AM – 12:00 PM)]
+**What I did**:Examined the assignment repository and tested the original starter program.
 
 **Details**:
+- Read the assignment instructions and examined SchedulerSimulationSync.java.
+- Before adding the synchronization features, the initial starting program was compiled and executed.
+- observed the concurrent access to the Ready Queue by CPU threads.
+- The first terminal output was saved for comparison.
 
 **Challenges**:
-
+I looked at the RaceWindow and ReadyQueue.poll().To comprehend how concurrent access could result in a race scenario when the queue was not protected, use the pause() method.
 **Solution**:
 
-**Time spent**:
+**Time spent**: 1 hour
 
 ---
 
-### Entry 2 - [Date and Time]
-**What I did**:
+### Entry 2 - [November 15, 2026 (12:00 PM – 1:30 PM)]
+**What I did**:Ready Queue Lock is the first feature that has been implemented.
 
 **Details**:
+- ooked at the map and shared list in the ReadyQueue class.
+- Added a ReentrantLock named queueLock.
+- Protected add(), poll(), processOf(), and snapshot().
 
-**Challenges**:
+- Used lock() before accessing the shared data structures.
 
-**Solution**:
+- Used try/finally to ensure that the lock was always released.
 
-**Time spent**:
+**Challenges**:Since map, protecting just the poll() method would not be adequate.
+
+**Solution**:To ensure the shared queue data structures with the same queueLock.
+
+**Time spent**: 1 hour and 30 minutes
 
 ---
 
-### Entry 3 - [Date and Time]
-**What I did**:
+### Entry 3 - [November 15, 2026 (1:30 PM – 4:00 PM)]
+**What I did**:Shared Statistics Locks is the second feature that has been implemented.
 
 **Details**:
+- Examined contextSwitchCount, completedProcessCount, and totalServiceTime in SharedStats.
 
-**Challenges**:
+- Added separate locks for the three independent statistics.
 
-**Solution**:
+- Protected the methods that update each statistic.
 
-**Time spent**:
+- Also protected the corresponding getter methods.
+
+- Used try/finally to release each lock safely.
+
+**Challenges**:I had to determine how to safeguard the three independent statistics without needlessly stalling irrelevant updates and avoid race circumstances during read-modify-write operations.
+
+**Solution**:For every statistic, I utilized a different ReentrantLock. This allows actions on various statistics to continue independently while providing mutual exclusion for each variable.
+
+**Time spent**: 2 hours and 30 minutes
 
 ---
 
-### Entry 4 - [Date and Time]
-**What I did**:
+### Entry 4 - [November 16, 2026 (11:00 AM – 1:30 PM)]
+**What I did**:Feature 3: Counting Semaphore was put into practice.
 
 **Details**:
+- Imported java.util.concurrent.Semaphore.
 
-**Challenges**:
+- Created a counting semaphore initialized to zero.
 
-**Solution**:
+- Released one permit whenever a process was added to the Ready Queue.
 
-**Time spent**:
+- Replaced the repeated polling loop and Thread.sleep(20) with acquire().
+
+- Added shutdown signaling to wake up CPU threads after all processes were completed.
+
+**Challenges**:Managing CPU threads that were stalled while awaiting a semaphore permit presented the biggest difficulty. When no more processes were created, I had to make sure they could awaken and shut down.
+**Solution**:After all processes are finished, I put in place a shutdown procedure that releases permits equal to totalCPUs. To make sure the shutdown signal is transmitted only once, I additionally employed a shutdown flag.
+
+**Time spent**:2 hours and 30 minutes
 
 ---
 
-### Entry 5 - [Date and Time]
-**What I did**:
+### Entry 5 - [ November 16, 2026 (1:30 PM – 4:00 PM)]
+**What I did**:assembled, examined, and confirmed the finished product.
+
 
 **Details**:
+- Compiled SchedulerSimulationSync.java.
 
-**Challenges**:
+- Corrected a missing closing brace that initially caused a compilation error.
 
-**Solution**:
+- Ran the final simulation and examined the verification block.
 
-**Time spent**:
+- Checked the context switches, completed processes, total service time, and busy-waiting polls.
+
+- Repeated the final verification runs and reviewed the results.
+
+**Challenges**:I had to ensure that the application generated accurate statistics, finished all processes, terminated without leaving any stopped CPU threads, and properly compiled.
+
+
+**Solution**:I corrected the syntax error, reviewed the synchronization and shutdown logic, and ran the program repeatedly. The final successful output showed that all four expected values matched the observed values and that busy-waiting polls were zero.
+
+**Time spent**:2 hours and 30 minutes
 
 ---
 
-### Entry 6 - [Optional - Date and Time]
-**What I did**:
+### Entry 6 - [November 16, 2026 (3:30 PM – 4:00 PM)]
+**What I did**:prepared the repository for submission after reviewing the project documentation.
 
 **Details**:
+- Reviewed MY_WORK.md to make sure the development log, reflection, and technical answers were included.
 
-**Challenges**:
+- Checked the project files and verified that the three synchronization features were implemented.
 
-**Solution**:
+- Reviewed the Git commit history to ensure that the feature changes were documented with meaningful commit messages.
 
-**Time spent**:
+- Checked the final verification results and confirmed that the repository was ready for submission.
+
+**Challenges**:ensuring consistency and completeness in the implementation, documentation, and Git history.
+
+**Solution**:To find anything that needed to be fixed before submission, I went over the project requirements and contrasted them with the features and documentation that had been put in place.
+
+**Time spent**:30 minutes
 
 ---
 
@@ -214,14 +260,14 @@
 
 > 💡 **TIP:** Fill this in **last**, after all entries are written.
 
-**Total time spent on assignment**: [X hours]
+**Total time spent on assignment**: 10 hours
 
-**Most challenging part**:
+**Most challenging part**:Implementing the counting semaphore shutdown technique was the most difficult component since blocked CPU threads had to wake up and end once all processes were finished.
 
-**Most interesting learning**:
+**Most interesting learning**:I discovered how a counting semaphore enables CPU threads to wait effectively rather than continuously checking an empty queue and how locks shield shared data from race situations
 
 **What I would do differently next time**:
-
+Before putting the features into practice, I would examine the shared data structures and thread interactions. Additionally, I would test each feature independently and record the outcomes following each work session.
 ---
 
 # Part B: Reflection (0.5 mark)
@@ -239,44 +285,41 @@
 > 💡 **TIP:** Talk about race conditions (read-modify-write), critical sections, mutual exclusion with `ReentrantLock` and `try/finally`, the role of a counting semaphore, and what surprised you when the starter failed.
 
 **Your Answer:** *(5-7 sentences)*
-
-[Write your answer here.]
-
+I discovered that when several threads access and alter shared data simultaneously, synchronization is crucial. When two threads read the same data, change it, and then write it back without adequate security, it can result in a race condition and a lost update. To safeguard the shared Ready Queue and stop several CPU threads from simultaneously accessing its data structures, I employed a ReentrantLock in my project. To safeguard their getter and update methods, I also implemented different locks for each of the three shared statistics. I discovered that the use of try/finally is crucial since it ensures that a lock is released even in the event of an exception. Ultimately, I discovered that CPU threads can be forced to wait until a process gets
 ## Question 2: What was the most challenging part of this assignment?
 
 > 💡 **TIP:** Pick **one** specific challenge (understanding why the starter failed, choosing the lock granularity, the initial value of the semaphore, the shutdown of the CPUs, Git, the video) and say *why* it was hard.
 
 **Your Answer:** *(5-7 sentences)*
 
-[Write your answer here.]
+Implementing the counting semaphore and properly managing the CPU shutdown were the most difficult aspects of this task. I realized that since there are no processes available before they are added to the Ready Queue, the semaphore should begin with 0 permits. But I had to ensure that each CPU obtained a permit before accepting a process, and that each new process added to the queue released one permit. The possibility of CPU threads becoming blocked indefinitely after all programs were finished presented another difficulty. I created a shutdown mechanism that releases permissions equivalent to the entire number of CPUs in order to address this issue. Because the CPUs had to awaken, acknowledge that the work was completed, and end without interruption, this section required careful consideration.
 
 ## Question 3: How did you overcome the challenges you faced?
 
 > 💡 **TIP:** Describe your method: reading the slides and the documentation, adding `System.out.println` to debug, running the program many times, re-reading the README, testing after each small change, asking for help.
 
 **Your Answer:** *(5-7 sentences)*
+By carefully reading the task instructions and reviewing the program structure before making any changes, I was able to overcome the difficulties. To comprehend how the threads shared data, I looked at the roles of ReadyQueue, SharedStats, and CpuWorker. One by one, I added the synchronization features, and after each modification, I verified the methods that were impacted. I looked over the code structure and fixed the missing closing brace that I found during compilation, which resulted in a compilation problem. Once the features were finished, I assembled and repeatedly executed the program to verify the outcomes. These tests enabled me to verify that the busy-waiting polls were zero and that all four expected values matched the observed values.
 
-[Write your answer here.]
 
 ## Question 4: Where can synchronization concepts be applied in real-world applications?
 
 > 💡 **TIP:** Use real applications you know (banking and money transfers, ticket or seat booking, a shared counter on a website, a print queue, a database) and connect each one to what you built here (shared data, critical section, lock or semaphore).
 
 **Your Answer:** *(5-7 sentences)*
-
-[Write your answer here.]
+Many real-world applications that allow many users or processes to access shared resources require synchronization. For instance, locks in financial systems can stop two transactions from simultaneously changing the same account balance. Synchronization keeps two clients from concurrently reserving the same seat in online ticketing systems. When several transactions read or update data in a database, locks safeguard shared records. In a printing system, a semaphore can also be used to restrict access to certain printers or other resources. These examples are comparable to my project since synchronization was required to maintain accurate results when different CPU cores accessed a common Ready Queue and shared statistics.
 
 ### Optional: What would you like to learn more about?
-
-[Any topics related to synchronization or operating systems that you're curious about?]
+I'm interested in learning more about sophisticated synchronization methods, thread scheduling, and deadlocks. Additionally, I'm curious about how operating systems effectively handle numerous threads.
 
 ### Optional: How confident do you feel about synchronization concepts now?
 
-[Beginner / Intermediate / Confident. What do you understand well? What needs more practice?]
+Intermediate.I am familiar with the fundamental ideas of locks, counting semaphores, mutual exclusion, critical sections, and race conditions. I can describe how I applied these ideas to my project, but I still need more experience with complex multithreaded programs and deadlock prevention.
 
 ### Optional: Feedback on the assignment
 
-[Any comments? Was it helpful? Too easy or hard? Suggestions?]
+Instead of just learning theoretical ideas, the assignment helped me understand synchronization through real implementation. The semaphore shutdown technique, however, was difficult and needed thorough testing. The assignment, in my opinion, offers a good chance to comprehend how different threads interact when they share resources.
+
 
 ---
 
